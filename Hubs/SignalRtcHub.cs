@@ -37,10 +37,13 @@ namespace signalRtc.Hubs
             socketToRoom.Add(Context.ConnectionId, roomID);
 
 
-            var usersInRoom = users[roomID].FindAll(id => id != Context.ConnectionId);
+            //var usersInRoom = users[roomID].FindAll(id => id != Context.ConnectionId);
 
-            await Clients.Clients(Context.ConnectionId).SendAsync("GetId", Context.ConnectionId);
-            await Clients.Group(roomID).SendAsync("AllUsers", JsonSerializer.Serialize(usersInRoom));
+            //await Clients.Clients(Context.ConnectionId).SendAsync("GetId", Context.ConnectionId);
+
+            var userSend = JsonSerializer.Serialize(users[roomID]);
+            System.Diagnostics.Debug.WriteLine(userSend);
+            await Clients.Group(roomID).SendAsync("AllUsers", userSend);
         }
 
         public async Task SendingSignal(string json)
@@ -50,9 +53,9 @@ namespace signalRtc.Hubs
             {
                 return;
             }
-            System.Diagnostics.Debug.WriteLine("Payload:");
+            /*System.Diagnostics.Debug.WriteLine("Payload:");
             System.Diagnostics.Debug.WriteLine("CallerID: "+payload.callerID);
-            System.Diagnostics.Debug.WriteLine("userToSignal:"+ payload.userToSignal);
+            System.Diagnostics.Debug.WriteLine("userToSignal:"+ payload.userToSignal);*/
             await Clients.Client(payload.userToSignal).SendAsync("UserJoined", JsonSerializer.Serialize(payload));
         }
 
@@ -60,19 +63,22 @@ namespace signalRtc.Hubs
         {
             PayLoad payload = JsonSerializer.Deserialize<PayLoad>(json);
             payload.userToSignal = Context.ConnectionId;
-            System.Diagnostics.Debug.WriteLine("Payload:");
+            /*System.Diagnostics.Debug.WriteLine("Payload:");
             System.Diagnostics.Debug.WriteLine("CallerID: " + payload.callerID);
-            System.Diagnostics.Debug.WriteLine("userToSignal:" + payload.userToSignal);
+            System.Diagnostics.Debug.WriteLine("userToSignal:" + payload.userToSignal);*/
             await Clients.Client(payload.callerID).SendAsync("ReceivingReturnedSignal", payload);
         }
 
         public override Task OnDisconnectedAsync(Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine("User disconnected");
             if (socketToRoom.TryGetValue(Context.ConnectionId, out var roomID))
             {
                 if (users.TryGetValue(roomID, out var room))
                 {
+                    System.Diagnostics.Debug.WriteLine("Removing room");
                     room = room.FindAll(id => id != Context.ConnectionId);
+                    users[roomID] = room;
                 }
             }
 
